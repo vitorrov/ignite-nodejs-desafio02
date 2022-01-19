@@ -29,6 +29,13 @@ function checksExistsUserAccount(request, response, next) {
 function checksCreateTodosUserAvailability(request, response, next) {
   const { user } = request;
 
+  if (user.pro) return next();
+
+  if (!user.pro && user.todos.length >= 10)
+    return response
+      .status(403)
+      .json({ error: "You can not create another todo" });
+
   if ((!user.pro && user.todos.length < 10) || user.pro) return next();
 
   return response
@@ -37,7 +44,7 @@ function checksCreateTodosUserAvailability(request, response, next) {
 }
 
 function checksTodoExists(request, response, next) {
-  const { username } = request;
+  const { username } = request.headers;
   const { id } = request.params;
 
   const isUuid = validate(id);
@@ -45,12 +52,13 @@ function checksTodoExists(request, response, next) {
     return response.status(400).json({ error: "Please, provide a uuid" });
 
   const user = findUserByUsername(username);
-
   if (!user) return response.status(404).json({ error: "User not found" });
 
   const todo = user.todos.find((todo) => todo.id === id);
 
   if (!todo) return response.status(404).json({ error: "Todo not found" });
+
+  request.todo = todo;
 
   return next();
 }
